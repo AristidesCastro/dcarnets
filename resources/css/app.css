@@ -1,0 +1,101 @@
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+@source "../views";
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
+@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-zinc-50: #fafafa;
+    --color-zinc-100: #f5f5f5;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a3a3a3;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
+    --color-zinc-700: #404040;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
+
+    --color-accent: var(--color-neutral-800);
+    --color-accent-content: var(--color-neutral-800);
+    --color-accent-foreground: var(--color-white);
+}
+
+@layer theme {
+    .dark {
+        --color-accent: var(--color-white);
+        --color-accent-content: var(--color-white);
+        --color-accent-foreground: var(--color-neutral-800);
+    }
+}
+
+@layer base {
+
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
+
+[data-flux-field] {
+    @apply grid gap-2;
+}
+
+[data-flux-label] {
+    @apply  !mb-0 !leading-tight;
+}
+
+input:focus[data-flux-control],
+textarea:focus[data-flux-control],
+select:focus[data-flux-control] {
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+/* \[:where(&)\]:size-4 {
+    @apply size-4;
+} */
+
+/* resources/css/app.css */
+
+/* Estilos para la vista previa interactiva */
+.draggable-element {
+    /* Asegura que el handle se posicione relativo a este */
+    position: absolute;
+    /* Evita seleccionar texto dentro al arrastrar */
+    user-select: none;
+}
+
+.draggable-element:hover .drag-handle {
+    /* Muestra el handle al pasar el mouse sobre el elemento */
+    display: flex !important; /* Usa flex para centrar el icono SVG si lo tienes */
+    /* display: block !important; Si no usas flex */
+}
+
+/* Opcional: Cambiar borde al hacer hover para indicar interactividad */
+.draggable-element:hover {
+   /* border-style: solid !important; */
+   /* border-color: #3498db !important; */
+   /* box-shadow: 0 0 5px rgba(52, 152, 219, 0.7); */
+}
+
+/* Estilo mientras se arrastra (interact.js añade 'interact-dragging') */
+.draggable-element.interact-dragging {
+    opacity: 0.7;
+    z-index: 999 !important; /* Asegura que esté por encima mientras se arrastra */
+    border-style: solid !important;
+    border-color: #2ecc71 !important;
+}
+
+.drag-handle {
+    /* Estilos base ya definidos inline, puedes añadir más aquí si prefieres */
+}

@@ -1,0 +1,93 @@
+/* Estilos para la galería de imágenes en formato de cuadrícula */
+/*
+  El div con la clase .custom-grid-radio-gallery es el que Filament usa para las opciones de Radio.
+  Por defecto, Filament lo configura para 1 columna. Necesitamos anular esto.
+  Este div es el padre directo de los items de la galería (div.break-inside-avoid).
+*/
+.custom-grid-radio-gallery { /* Apuntamos directamente al div que tiene nuestra clase */
+    display: flex; /* Cambiado de grid a flex */
+    flex-wrap: nowrap; /* Asegura que los items estén en una sola línea */
+    overflow-x: auto; /* Habilita el scroll horizontal */
+    gap: 0.75rem; /* Espacio entre los items (equivalente a Tailwind gap-3) */
+    padding-bottom: 1rem; /* Espacio para la barra de scroll */
+    /* Eliminadas propiedades de grid y multi-columnas:
+    grid-template-columns: repeat(4, 1fr);
+    columns, -webkit-columns, -moz-columns, --cols-default */
+}
+
+/*
+  Este es el LABEL que Filament crea, y es el padre directo de nuestro .gallery-item-container.
+  Hacemos que se expanda para llenar el DIV padre (el grid item, que es .break-inside-avoid).
+*/
+.custom-grid-radio-gallery .break-inside-avoid > label {
+    display: flex; /* Para permitir que .gallery-item-container se expanda */
+    width: 100%;   /* Ocupa todo el ancho del div padre (grid item) */
+    height: 100%;  /* Ocupa toda la altura del div padre (grid item) - los grid items se estiran por defecto */
+    padding: 0;    /* Quita cualquier padding por defecto del label */
+    cursor: pointer; /* El cursor ya está en gallery-item-container, pero no hace daño aquí */
+}
+
+/*
+  Los elementos .break-inside-avoid son los items directos del contenedor flex.
+  Nos aseguramos de que no se encojan.
+*/
+.custom-grid-radio-gallery .break-inside-avoid {
+    flex-shrink: 0; /* Evita que los items se encojan */
+}
+
+/*
+  El .gallery-item-container es el div que generamos en PHP.
+  Este es el "recuadro" principal de cada imagen.
+*/
+.custom-grid-radio-gallery .gallery-item-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0.5rem; /* p-2, espacio interno del recuadro */
+    justify-content: center; /* Centra la imagen verticalmente si el contenedor es más alto */
+    border: 1px solid #e5e7eb; /* border-gray-200, borde del recuadro */
+    border-radius: 0.375rem; /* rounded-md, esquinas redondeadas del recuadro */
+    cursor: pointer;
+    width: 120px;  /* Ancho fijo para cada item de la galería, ajusta según necesites */
+    /* height: 100%; */ /* Eliminamos height: 100% para usar aspect-ratio */
+    aspect-ratio: 1 / 1; /* Hace que el contenedor sea cuadrado */
+    box-sizing: border-box;
+    /* Transición para el color del borde, sombra y el efecto de escala */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+    overflow: hidden; /* Para asegurar que el contenido escalado no se desborde de forma extraña, aunque con scale pequeño puede no ser necesario */
+}
+
+.custom-grid-radio-gallery .gallery-item-container:hover {
+    border-color: #9ca3af; /* border-gray-400, color del borde al pasar el mouse */
+    transform: scale(1.05); /* Aumenta el tamaño del recuadro en un 5% */
+}
+
+/* Estilo para cuando una opción está seleccionada */
+/* El input[type="radio"] y el div.grid (que contiene .gallery-item-container) son hermanos DENTRO del label.
+   El label es a su vez hijo de .break-inside-avoid. */
+.custom-grid-radio-gallery .break-inside-avoid > label input[type="radio"]:checked ~ div.grid .gallery-item-container {
+    border-color: #22c55e; /* Un verde bonito (Tailwind green-500) para el recuadro */
+    box-shadow: 0 0 0 2px #22c55e; /* Sombra del mismo color verde para destacar más */
+    background-color: transparent; /* Quitamos el fondo azul claro, opcional */
+}
+
+/* Estilo de la previsualización de la imagen dentro del recuadro */
+.custom-grid-radio-gallery .gallery-item-image {
+    width: 100%; /* La imagen ocupa todo el ancho disponible dentro del padding del contenedor */
+    height: 100%; /* La imagen ocupa toda la altura del .gallery-item-container */
+    object-fit: cover; /* La imagen cubrirá el área, manteniendo su proporción y recortándose si es necesario */
+    border-radius: 0.25rem; /* rounded-sm, esquinas redondeadas para la imagen misma */
+    /* margin-bottom: 0.25rem; */ /* Eliminamos el margen inferior ya que no hay etiqueta */
+}
+
+/*
+  Intentar ocultar explícitamente el input de radio nativo de forma más agresiva.
+  Filament maneja la funcionalidad del radio a través del label asociado,
+  por lo que ocultar visualmente el input no debería afectar su funcionamiento.
+*/
+.custom-grid-radio-gallery input[type="radio"] {
+    display: none !important; /* La forma más directa de ocultarlo */
+}
+
+/* Si tienes otros estilos personalizados, mantenlos aquí debajo o arriba */

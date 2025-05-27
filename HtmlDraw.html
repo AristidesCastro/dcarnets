@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diseñador de Carnet (2 Caras)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,100&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column; /* Stack controls above container */
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        .top-controls {
+            padding: 10px 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .top-controls .form-group label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .top-controls .form-group select {
+             padding: 5px;
+             border: 1px solid #ccc;
+             border-radius: 4px;
+        }
+
+
+        .container {
+            display: flex;
+            width: 100%;
+            flex-grow: 1; /* Allow container to take remaining height */
+            overflow: hidden; /* Prevent container scroll, let children handle it */
+        }
+
+        /* Contenedor principal para las áreas de previsualización */
+        .canvas-preview-container-wrapper {
+            flex-grow: 1; /* Ocupa el espacio disponible */
+            display: flex;
+            /* flex-direction se establecerá en JS para mostrar las áreas lado a lado o apiladas */
+            justify-content: center;
+            align-items: center;
+            background-color: #ddd;
+            overflow: hidden; /* Asegura que nada se salga del contenedor principal */
+            position: relative;
+            padding: 20px; /* Añadir padding alrededor de las áreas */
+            box-sizing: border-box;
+            width: 80%; /* Ancho inicial aumentado */
+            gap: 20px; /* Espacio entre las áreas de previsualización */
+        }
+
+
+        /* Área individual de previsualización para cada carnet */
+        .canvas-preview {
+             display: flex;
+             flex-direction: column; /* Stack label above card */
+             justify-content: center;
+             align-items: center;
+             background-color: #eee; /* Fondo para diferenciar las áreas */
+             border-radius: 8px;
+             padding: 10px; /* Padding dentro de cada área */
+             overflow: hidden; /* Asegura que el carnet escalado no se salga */
+             position: relative;
+             flex-grow: 1; /* Permite que cada área ocupe espacio igual */
+             /* Las dimensiones se ajustarán en JS */
+        }
+
+        .canvas-preview-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            text-align: center;
+            width: 100%; /* Ocupa todo el ancho del área de previsualización */
+        }
+
+
+        /* Estilos para el separador arrastrable */
+        .splitter {
+            width: 5px;
+            cursor: col-resize;
+            background-color: #ccc;
+            flex-shrink: 0;
+        }
+
+
+        .controls-panel {
+            width: 20%; /* Ancho inicial reducido */
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+            overflow-y: auto; /* Permite scroll si la lista de elementos es larga */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .card-container {
+             position: relative; /* Needed for positioning elements inside */
+             /* Dimensions and transform will be set by JavaScript */
+             transform-origin: center center; /* Scale from the center */
+             box-sizing: border-box; /* Include padding and border in the size */
+             transition: width 0.3s ease, height 0.3s ease, transform 0.3s ease; /* Smooth transitions */
+             flex-shrink: 0; /* Prevent cards from shrinking */
+             background-color: #fff; /* Default background */
+             border: 1px solid #ccc; /* Default border */
+             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Default shadow */
+        }
+
+
+        .card-element {
+            position: absolute;
+            box-sizing: border-box;
+            cursor: grab;
+            border: 1px dashed transparent;
+            user-select: none;
+        }
+
+         .card-element.selected {
+            border-color: #28a745;
+            cursor: grab;
+        }
+
+        .card-element.selected:active {
+             cursor: grabbing;
+        }
+
+
+        .resize-handle {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background-color: #007bff;
+            border: 1px solid #fff;
+            border-radius: 2px;
+            cursor: se-resize;
+            z-index: 1001;
+        }
+
+
+        .card-element.type-text {
+             overflow: hidden;
+             display: flex;
+             align-items: center;
+        }
+
+         .card-element.type-text > div {
+             width: 100%;
+             box-sizing: border-box;
+             white-space: pre-wrap;
+             word-break: break-word;
+         }
+
+        .card-element.type-imagen img,
+        .card-element.type-fondo img,
+        .card-element.type-fotografia img {
+            display: block !important;
+            width: 100% !important;
+            height: 100% !important;
+             pointer-events: none;
+        }
+
+         .card-element.type-fondo {
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            cursor: default !important;
+            border: none !important;
+            pointer-events: none;
+            object-fit: cover !important;
+         }
+
+         .card-element.type-fotografia img {
+             object-fit: contain;
+         }
+
+
+        .element-type-selection {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .element-type-selection label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .element-type-selection select,
+        .element-type-selection button {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+         .element-type-selection button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .element-type-selection button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Estilos para los controles de zoom */
+        .zoom-controls {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .zoom-controls h3 {
+             margin-top: 0;
+             margin-bottom: 10px;
+             color: #333;
+        }
+
+        .zoom-controls button {
+            padding: 8px 12px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+            border-radius: 44px;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .zoom-controls button:hover {
+            background-color: #eee;
+        }
+
+        /* Styles for Face Selection Tabs */
+        .face-selection-tabs {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .face-selection-tabs h3 {
+             margin-top: 0;
+             margin-bottom: 10px;
+             color: #333;
+        }
+
+        .face-selection-tabs button {
+            padding: 8px 15px;
+            border: 1px solid #ccc;
+            border-bottom: none; /* Remove bottom border for tab effect */
+            border-radius: 4px 4px 0 0; /* Rounded top corners */
+            background-color: #f0f0f0;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+            margin-right: 5px;
+        }
+
+        .face-selection-tabs button.active {
+            background-color: #fff;
+            border-color: #ccc;
+            border-bottom-color: #fff; /* Match background color */
+            font-weight: bold;
+        }
+
+        .face-selection-tabs button:hover:not(.active) {
+            background-color: #e9e9e9;
+        }
+
+
+        .element-list h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .element-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .element-list li {
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            margin-bottom: 8px;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .element-list li:hover {
+            background-color: #f0f0f0;
+        }
+
+         .element-list li.selected {
+             border-color: #007bff;
+             background-color: #e9f5ff;
+         }
+
+
+        .element-list .element-info {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        .element-list .element-controls button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .element-list .element-controls button:hover {
+            color: #000;
+        }
+
+        /* Estilos para iconos de Font Awesome */
+        .element-list .element-controls button i {
+            pointer-events: none;
+        }
+
+        /* --- Estilos de la Modal --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+         .modal-overlay.visible .modal-content {
+             transform: translateY(0);
+         }
+
+
+        .modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-form-group {
+            margin-bottom: 15px;
+        }
+
+        .modal-form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .modal-form-group input[type="text"],
+        .modal-form-group input[type="number"],
+        .modal-form-group input[type="color"],
+        .modal-form-group select,
+        .modal-form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+
+         .modal-form-group textarea {
+             min-height: 80px;
+             resize: vertical;
+         }
+
+         /* Estilos para los controles de negrita/itálica */
+         .modal-style-controls {
+             display: flex;
+             align-items: center;
+             gap: 15px;
+             margin-bottom: 15px;
+         }
+
+         .modal-style-controls label {
+             font-weight: normal;
+             margin-bottom: 0;
+         }
+
+         .modal-style-controls input[type="checkbox"] {
+             margin-right: 5px;
+         }
+
+         /* Estilos para la previsualización de imagen en la modal */
+         #editImagePreview {
+             max-width: 100%;
+             max-height: 150px;
+             display: block;
+             margin: 15px auto;
+             border: 1px solid #eee;
+             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+         }
+
+        /* Estilos específicos para los controles de contorno y sombra en la modal de texto */
+        .modal-shadow-controls {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .modal-shadow-controls label {
+             font-weight: bold;
+             color: #555;
+             display: block;
+             margin-bottom: 5px;
+        }
+         .modal-shadow-controls .shadow-inputs {
+             display: flex;
+             gap: 10px;
+             align-items: center;
+             flex-wrap: wrap;
+         }
+         .modal-shadow-controls .shadow-inputs input[type="number"] {
+             width: 60px;
+         }
+
+        /* Estilos para 2 COLUMNAS en el modal de texto */
+        .modal-text-content {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .modal-text-content > div {
+            flex: 1 1 250px;
+        }
+
+        .modal-text-content .modal-form-group {
+             width: 100%;
+        }
+
+        /* Estilos para los controles de escalado por porcentaje en la modal de imagen */
+        .modal-scale-controls {
+             margin-top: 15px;
+             padding-top: 10px;
+             border-top: 1px solid #eee;
+        }
+        .modal-scale-controls label {
+             font-weight: bold;
+             color: #555;
+             display: block;
+             margin-bottom: 5px;
+        }
+        .modal-scale-controls .scale-input {
+             display: flex;
+             align-items: center;
+             gap: 10px;
+        }
+        .modal-scale-controls .scale-input input[type="number"] {
+             width: 80px;
+        }
+
+
+        .modal-buttons {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+            margin-left: 10px;
+        }
+
+        .modal-buttons .btn-cancel {
+            background-color: #ccc;
+            color: #333;
+        }
+
+        .modal-buttons .btn-cancel:hover {
+            background-color: #bbb;
+        }
+
+        .modal-buttons .btn-save {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .modal-buttons .btn-save:hover {
+            background-color: #218838;
+        }
+
+         .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #aaa;
+         }
+         .modal-close:hover {
+             color: #777;
+         }
+
+
+    </style>
+</head>
+<body>
+
+    <div class="top-controls">
+        <div class="form-group">
+            <label for="designFaces">Diseño de Carnet:</label>
+            <select id="designFaces">
+                <option value="1">1 Cara</option>
+                <option value="2">2 Caras</option>
+            </select>
+        </div>
+         <div class="form-group">
+            <label for="cardOrientation">Orientación del Carnet:</label>
+            <select id="cardOrientation">
+                <option value="horizontal">Horizontal</option>
+                <option value="vertical">Vertical</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="canvas-preview-container-wrapper">
+            </div>
+
+        <div class="splitter"></div>
+
+        <div class="controls-panel">
+            <div class="face-selection-tabs">
+                 <h3>Editar Cara:</h3>
+                 <button id="tabFront" class="active">Delantera</button>
+                 <button id="tabBack">Trasera</button>
+            </div>
+
+            <div class="element-type-selection">
+                <h3>Agregar Elemento</h3>
+                 <div class="form-group">
+                    <label for="elementType">Tipo de Elemento:</label>
+                    <select id="elementType">
+                        <option value="text">Texto</option>
+                        <option value="registro">Registro</option>
+                        <option value="imagen">Imagen</option>
+                        <option value="fondo">Fondo</option>
+                        <option value="fotografia">Fotografía</option> </select>
+                     <button onclick="addElement()">Agregar</button>
+                </div>
+            </div>
+
+            <div class="zoom-controls">
+                <h3>Zoom</h3>
+                <button onclick="zoomIn()">+</button>
+                <button onclick="zoomOut()">-</button>
+                <button onclick="resetZoom()">Ajustar</button>
+            </div>
+
+
+            <div class="element-list">
+                <h3>Elementos (<span id="currentFaceLabel">Delantera</span>)</h3>
+                <ul id="elementsList">
+                    </ul>
+            </div>
+        </div>
+    </div>
+
+     <div class="modal-overlay" id="editImageModalOverlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="hideEditImageModal()">&times;</span>
+            <h3>Editar Imagen</h3>
+            <div class="modal-form-group">
+                <label for="uploadImageFile">Subir Imagen:</label>
+                <input type="file" id="uploadImageFile" accept="image/*">
+            </div>
+            <img id="editImagePreview" src="" alt="Previsualización de Imagen" style="display: none;">
+
+            <div class="modal-form-group">
+                <input type="checkbox" id="maintainAspectRatioCheckbox">
+                <label for="maintainAspectRatioCheckbox">Mantener relación de aspecto</label>
+            </div>
+
+            <div class="modal-form-group modal-scale-controls">
+                <label for="editScalePercentage">Escalar por Porcentaje:</label>
+                <div class="scale-input">
+                    <input type="number" id="editScalePercentage" min="10" max="100" value="100" step="10">
+                    <span>%</span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="hideEditImageModal()">Cancelar</button>
+                <button class="btn-save" onclick="saveImageElement()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="editTextModalOverlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="hideEditTextModal()">&times;</span>
+            <h3>Editar Texto</h3>
+             <div class="modal-text-content">
+                <div>
+                    <div class="modal-form-group">
+                        <label for="editTextContent">Contenido del Texto:</label>
+                        <textarea id="editTextContent"></textarea>
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="editFontSize">Tamaño de Fuente (px):</label>
+                        <input type="number" id="editFontSize" min="1">
+                    </div>
+                     <div class="modal-form-group">
+                        <label for="editTextColor">Color del Texto:</label>
+                        <input type="color" id="editTextColor">
+                    </div>
+                     <div class="modal-form-group">
+                        <label for="editTextAlignment">Alineación:</label>
+                        <select id="editTextAlignment">
+                            <option value="left">Izquierda</option>
+                            <option value="center">Centro</option>
+                            <option value="right">Derecha</option>
+                            <option value="justify">Justificado</option>
+                        </select>
+                    </div>
+                     <div class="modal-form-group">
+                        <label for="editFontFamily">Fuente:</label>
+                        <select id="editFontFamily">
+                            <option value="sans-serif">Sans-serif (Por defecto)</option>
+                            <option value="serif">Serif</option>
+                            <option value="monospace">Monospace</option>
+                            <option value="Roboto, sans-serif">Roboto</option>
+                            <option value="Open Sans, sans-serif">Open Sans</option>
+                            </select>
+                    </div>
+                    <div class="modal-style-controls">
+                         <label>Estilo:</label>
+                         <div>
+                            <input type="checkbox" id="editFontWeightBold">
+                            <label for="editFontWeightBold">Negrita</label>
+                         </div>
+                         <div>
+                            <input type="checkbox" id="editFontStyleItalic">
+                            <label for="editFontStyleItalic">Itálica</label>
+                         </div>
+                    </div>
+                </div>
+
+                <div>
+                     <div class="modal-shadow-controls">
+                         <label>Contorno y Sombra del Texto:</label>
+                         <div class="modal-form-group">
+                             <label for="editOutlineThickness">Grosor del Contorno (px):</label>
+                             <input type="number" id="editOutlineThickness" min="0" value="0" step="0.1">
+                         </div>
+                          <div class="modal-form-group">
+                             <label for="editOutlineColor">Color del Contorno:</label>
+                             <input type="color" id="editOutlineColor" value="#000000">
+                         </div>
+                          <div class="modal-form-group shadow-inputs">
+                              <label for="editShadowColor">Color de la Sombra:</label>
+                              <input type="color" id="editShadowColor" value="#000000">
+                              <label for="editShadowOffsetX">Desplazamiento X (px):</label>
+                              <input type="number" id="editShadowOffsetX" value="0">
+                              <label for="editShadowOffsetY">Desplazamiento Y (px):</label>
+                              <input type="number" id="editShadowOffsetY" value="0">
+                              <label for="editShadowBlur">Difuminado (px):</label>
+                              <input type="number" id="editShadowBlur" min="0" value="0">
+                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="hideEditTextModal()">Cancelar</button>
+                <button class="btn-save" onclick="saveTextElement()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Estado global de la aplicación
+        let appState = {
+            orientation: 'horizontal', // 'horizontal' o 'vertical'
+            designFaces: 1, // 1 o 2 caras
+            editingFace: 'front', // 'front' o 'back'
+            cardDimensions: { // Dimensiones base en píxeles
+                horizontal: { width: 1004, height: 650 },
+                vertical: { width: 650, height: 1004 }
+            },
+            elements: { // Separate elements for front and back
+                front: [],
+                back: []
+            },
+            selectedElementId: null,
+            zoomLevel: 1.0 // Zoom level is now applied per card
+        };
+
+        // Referencias a elementos del DOM
+        const topControls = document.querySelector('.top-controls');
+        const designFacesSelect = document.getElementById('designFaces');
+        const container = document.querySelector('.container');
+        const canvasPreviewContainerWrapper = document.querySelector('.canvas-preview-container-wrapper'); // Nuevo contenedor wrapper
+        let canvasPreviewFront = null; // Se crearán dinámicamente
+        let canvasPreviewBack = null; // Se crearán dinámicamente
+        let cardFront = null; // Se crearán dinámicamente
+        let cardBack = null; // Se crearán dinámicamente
+
+        const controlsPanel = document.querySelector('.controls-panel');
+        const splitter = document.querySelector('.splitter');
+
+        const cardOrientationSelect = document.getElementById('cardOrientation');
+        const elementTypeSelect = document.getElementById('elementType');
+        const elementsList = document.getElementById('elementsList');
+        const tabFront = document.getElementById('tabFront');
+        const tabBack = document.getElementById('tabBack');
+        const currentFaceLabel = document.getElementById('currentFaceLabel');
+
+
+        // Referencias a elementos de la Modal de Edición de Texto
+        const editTextModalOverlay = document.getElementById('editTextModalOverlay');
+        const editTextContentInput = document.getElementById('editTextContent');
+        const editFontSizeInput = document.getElementById('editFontSize');
+        const editTextColorInput = document.getElementById('editTextColor');
+        const editTextAlignmentSelect = document.getElementById('editTextAlignment');
+        const editFontFamilySelect = document.getElementById('editFontFamily');
+        const editFontWeightBoldCheckbox = document.getElementById('editFontWeightBold');
+        const editFontStyleItalicCheckbox = document.getElementById('editFontStyleItalic');
+
+        // Referencias a los nuevos controles de contorno y sombra en la modal de texto
+        const editOutlineThicknessInput = document.getElementById('editOutlineThickness');
+        const editOutlineColorInput = document.getElementById('editOutlineColor');
+        const editShadowColorInput = document.getElementById('editShadowColor');
+        const editShadowOffsetXInput = document.getElementById('editShadowOffsetX');
+        const editShadowOffsetYInput = document.getElementById('editShadowOffsetY');
+        const editShadowBlurInput = document.getElementById('editShadowBlur');
+
+
+        // Referencias a elementos de la Modal de Edición de Imagen
+        const editImageModalOverlay = document.getElementById('editImageModalOverlay');
+        const uploadImageFileInput = document.getElementById('uploadImageFile');
+        const editImagePreview = document.getElementById('editImagePreview');
+        const maintainAspectRatioCheckbox = document.getElementById('maintainAspectRatioCheckbox');
+        const editScalePercentageInput = document.getElementById('editScalePercentage');
+
+
+        // --- Variables de Arrastre y Escalado ---
+        let isDragging = false;
+        let isResizing = false;
+        let currentElement = null; // The DOM element being dragged/resized
+        let currentElementState = null; // The state object of the element being dragged/resized
+        let resizeHandle = null;
+        let xOffset = 0;
+        let yOffset = 0;
+        let initialWidth = 0;
+        let initialHeight = 0;
+        let initialMouseX = 0;
+        let initialMouseY = 0;
+        let initialAspectRatio = 1;
+        let originalBorderStyle = '';
+
+
+        // Variables para el separador arrastrable
+        let isSplitterDragging = false;
+        let initialSplitterMouseX = 0;
+        let initialCanvasWrapperWidth = 0; // Usar el wrapper ahora
+        const minPanelWidth = 100;
+
+
+        // Variables para guardar el ID del elemento que se está editando en las modales
+        let editingTextElementId = null;
+        let editingImageElementId = null;
+
+
+        // --- Funciones de Renderizado ---
+
+        // Crea o actualiza las áreas de previsualización y los carnets
+        function setupCanvasPreview() {
+             canvasPreviewContainerWrapper.innerHTML = ''; // Limpiar contenido anterior
+
+             const { designFaces, orientation, cardDimensions } = appState;
+             const { width: baseWidth, height: baseHeight } = cardDimensions[orientation];
+
+             // Crear área de previsualización para el frente
+             canvasPreviewFront = document.createElement('div');
+             canvasPreviewFront.classList.add('canvas-preview');
+             canvasPreviewFront.id = 'canvasPreviewFront';
+
+             // Añadir etiqueta para el frente
+             const labelFront = document.createElement('div');
+             labelFront.classList.add('canvas-preview-label');
+             labelFront.textContent = 'Cara 01 (Delantera)';
+             canvasPreviewFront.appendChild(labelFront);
+
+
+             // Crear el contenedor del carnet frontal
+             cardFront = document.createElement('div');
+             cardFront.classList.add('card-container');
+             cardFront.id = 'cardFront';
+             cardFront.style.width = `${baseWidth}px`;
+             cardFront.style.height = `${baseHeight}px`;
+             canvasPreviewFront.appendChild(cardFront);
+             canvasPreviewContainerWrapper.appendChild(canvasPreviewFront);
+
+
+             if (designFaces === 2) {
+                  // Crear área de previsualización para el reverso
+                  canvasPreviewBack = document.createElement('div');
+                  canvasPreviewBack.classList.add('canvas-preview');
+                  canvasPreviewBack.id = 'canvasPreviewBack';
+
+                   // Añadir etiqueta para el reverso
+                  const labelBack = document.createElement('div');
+                  labelBack.classList.add('canvas-preview-label');
+                  labelBack.textContent = 'Cara 02 (Trasera)';
+                  canvasPreviewBack.appendChild(labelBack);
+
+
+                   // Crear el contenedor del carnet trasero
+                  cardBack = document.createElement('div');
+                  cardBack.classList.add('card-container');
+                  cardBack.id = 'cardBack';
+                  cardBack.style.width = `${baseWidth}px`;
+                  cardBack.style.height = `${baseHeight}px`;
+                  canvasPreviewBack.appendChild(cardBack);
+                  canvasPreviewContainerWrapper.appendChild(canvasPreviewBack);
+
+                  // Configurar wrapper para mostrar las áreas lado a lado o apiladas
+                  if (orientation === 'horizontal') {
+                      // Horizontal cards stacked vertically
+                      canvasPreviewContainerWrapper.style.flexDirection = 'column';
+                  } else {
+                      // Vertical cards side-by-side horizontally
+                      canvasPreviewContainerWrapper.style.flexDirection = 'row';
+                  }
+                   canvasPreviewContainerWrapper.style.gap = '20px'; // Espacio entre áreas
+
+             } else {
+                  // Si es 1 cara, asegurar que el reverso no se muestre y el wrapper sea columna para centrar
+                  cardBack = null; // Reset reference
+                  canvasPreviewBack = null; // Reset reference
+                  canvasPreviewContainerWrapper.style.flexDirection = 'column'; // Centrar verticalmente el único carnet
+                  canvasPreviewContainerWrapper.style.gap = '0'; // No hay espacio entre áreas si solo hay una
+             }
+
+             // Re-adjuntar listeners de arrastre/redimensionamiento a los nuevos elementos card-container
+             addCanvasElementListeners();
+        }
+
+
+        // Renderiza los elementos dentro de los carnets
+        function renderCardElements() {
+            // Asegurarse de que los elementos card-container existan
+            if (!cardFront) return;
+
+            // Limpiar elementos existentes en los carnets
+            cardFront.innerHTML = '';
+            if (cardBack) cardBack.innerHTML = '';
+
+            // Re-añadir etiquetas a las áreas de previsualización si existen
+            if (canvasPreviewFront) {
+                 const existingLabelFront = canvasPreviewFront.querySelector('.canvas-preview-label');
+                 if (existingLabelFront) canvasPreviewFront.removeChild(existingLabelFront);
+                 const labelFront = document.createElement('div');
+                 labelFront.classList.add('canvas-preview-label');
+                 labelFront.textContent = 'Cara 01 (Delantera)';
+                 canvasPreviewFront.insertBefore(labelFront, cardFront); // Insert before the card
+            }
+
+            if (canvasPreviewBack) {
+                 const existingLabelBack = canvasPreviewBack.querySelector('.canvas-preview-label');
+                 if (existingLabelBack) canvasPreviewBack.removeChild(existingLabelBack);
+                 const labelBack = document.createElement('div');
+                 labelBack.classList.add('canvas-preview-label');
+                 labelBack.textContent = 'Cara 02 (Trasera)';
+                 canvasPreviewBack.insertBefore(labelBack, cardBack); // Insert before the card
+            }
+
+
+            // Renderizar elementos del frente
+            const sortedElementsFront = [...appState.elements.front].sort((a, b) => a.zIndex - b.zIndex);
+            sortedElementsFront.forEach(element => {
+                if (!element.visible) return;
+                appendElementToCard(element, cardFront);
+            });
+
+            // Renderizar elementos del reverso (solo si designFaces es 2)
+            if (appState.designFaces === 2 && cardBack) {
+                 const sortedElementsBack = [...appState.elements.back].sort((a, b) => a.zIndex - b.zIndex);
+                 sortedElementsBack.forEach(element => {
+                     if (!element.visible) return;
+                     appendElementToCard(element, cardBack);
+                 });
+            }
+        }
+
+
+        // Helper function to append an element to a specific card container
+        function appendElementToCard(element, cardContainer) {
+             const elementDiv = document.createElement('div');
+             elementDiv.classList.add('card-element', `type-${element.type}`);
+             elementDiv.dataset.elementId = element.id;
+             elementDiv.dataset.face = cardContainer === cardFront ? 'front' : 'back'; // Store face info
+
+
+             elementDiv.style.left = `${element.x}px`;
+             elementDiv.style.top = `${element.y}px`;
+             elementDiv.style.width = `${element.width}px`;
+             elementDiv.style.height = `${element.height}px`;
+             elementDiv.style.zIndex = element.zIndex;
+
+             if (element.type === 'text') {
+                 const innerTextDiv = document.createElement('div');
+                 innerTextDiv.textContent = element.content;
+                 innerTextDiv.style.fontSize = element.fontSize ? `${element.fontSize}px` : '1em';
+                 innerTextDiv.style.color = element.color || '#000';
+                 innerTextDiv.style.textAlign = element.textAlign || 'left';
+                 innerTextDiv.style.fontFamily = element.fontFamily || 'sans-serif';
+                 innerTextDiv.style.fontWeight = element.fontWeight || 'normal';
+                 innerTextDiv.style.fontStyle = element.fontStyle || 'normal';
+
+                 let textShadowValue = [];
+                 const outlineThickness = element.outlineThickness || 0;
+                 const outlineColor = element.outlineColor || '#000000';
+
+                 if (outlineThickness > 0) {
+                     textShadowValue.push(`${outlineThickness}px 0 ${outlineColor}`);
+                     textShadowValue.push(`-${outlineThickness}px 0 ${outlineColor}`);
+                     textShadowValue.push(`0 ${outlineThickness}px ${outlineColor}`);
+                     textShadowValue.push(`0 -${outlineThickness}px ${outlineColor}`);
+                     textShadowValue.push(`${outlineThickness}px ${outlineThickness}px ${outlineColor}`);
+                     textShadowValue.push(`-${outlineThickness}px ${outlineThickness}px ${outlineColor}`);
+                     textShadowValue.push(`${outlineThickness}px -${outlineThickness}px ${outlineColor}`);
+                     textShadowValue.push(`-${outlineThickness}px -${outlineThickness}px ${outlineColor}`);
+
+                      if (outlineThickness > 1) {
+                           const steps = Math.ceil(outlineThickness / 1);
+                           for (let i = 1; i <= steps; i++) {
+                                const offset = outlineThickness * (i / steps);
+                                textShadowValue.push(`${offset}px ${offset * 0.5}px ${outlineColor}`);
+                                textShadowValue.push(`${offset}px ${offset * -0.5}px ${outlineColor}`);
+                                textShadowValue.push(`-${offset}px ${offset * 0.5}px ${outlineColor}`);
+                                textShadowValue.push(`-${offset}px ${offset * -0.5}px ${outlineColor}`);
+                                textShadowValue.push(`${offset * 0.5}px ${offset}px ${outlineColor}`);
+                                textShadowValue.push(`${offset * 0.5}px -${offset}px ${outlineColor}`);
+                                textShadowValue.push(`-${offset * 0.5}px ${offset}px ${outlineColor}`);
+                                textShadowValue.push(`-${offset * 0.5}px -${offset}px ${outlineColor}`);
+                           }
+                      }
+                 }
+
+                 if (element.shadowColor && (element.shadowOffsetX !== 0 || element.shadowOffsetY !== 0 || element.shadowBlur > 0)) {
+                      textShadowValue.push(`${element.shadowOffsetX}px ${element.shadowOffsetY}px ${element.shadowBlur}px ${element.shadowColor}`);
+                 }
+
+                 innerTextDiv.style.textShadow = textShadowValue.join(', ');
+                 innerTextDiv.style.webkitTextStroke = 'none';
+                 innerTextDiv.style.textStroke = 'none';
+
+                 elementDiv.appendChild(innerTextDiv);
+
+             } else if (element.type === 'registro') {
+                 const innerRegistroDiv = document.createElement('div');
+                 innerRegistroDiv.textContent = `[Campo: ${element.content || 'Sin Definir'}]`;
+                 innerRegistroDiv.style.padding = '5px';
+                 innerRegistroDiv.style.border = '1px dashed #00f';
+                 innerRegistroDiv.style.backgroundColor = '#eef';
+                 innerRegistroDiv.style.textAlign = element.textAlign || 'left';
+                 elementDiv.appendChild(innerRegistroDiv);
+             } else if (element.type === 'imagen' || element.type === 'fondo' || element.type === 'fotografia') {
+                 const img = document.createElement('img');
+                 img.src = element.content || 'https://placehold.co/307x378/cccccc/000000?text=Foto+Usuario';
+                  img.onerror = function() {
+                     img.src = 'https://placehold.co/307x378/ff0000/ffffff?text=Error+Foto';
+                  };
+                  if (element.type === 'imagen' || element.type === 'fotografia') {
+                      img.style.objectFit = element.maintainAspectRatio ? 'contain' : 'fill';
+                  } else {
+                       img.style.objectFit = 'cover';
+                  }
+
+                 elementDiv.appendChild(img);
+             }
+
+             // Add resize handle only if the element is selected AND is on the currently editing face
+             if (element.id === appState.selectedElementId && elementDiv.dataset.face === appState.editingFace && element.type !== 'fondo') {
+                  elementDiv.classList.add('selected');
+                  const resizeHandleDiv = document.createElement('div');
+                  resizeHandleDiv.classList.add('resize-handle');
+                  elementDiv.appendChild(resizeHandleDiv);
+              }
+
+              if (element.type === 'fondo') {
+                  elementDiv.style.pointerEvents = 'none';
+              }
+
+             cardContainer.appendChild(elementDiv);
+        }
+
+
+        // Renderiza la lista de elementos en el panel de control
+        function renderElementList() {
+            elementsList.innerHTML = '';
+
+            const elementsToRender = appState.elements[appState.editingFace];
+
+            const reversedElements = [...elementsToRender].reverse();
+
+            reversedElements.forEach(element => {
+                const listItem = document.createElement('li');
+                listItem.dataset.elementId = element.id;
+                // Highlight list item if it's the selected element, regardless of face
+                if (element.id === appState.selectedElementId) {
+                    listItem.classList.add('selected');
+                }
+
+                const elementInfo = document.createElement('span');
+                elementInfo.classList.add('element-info');
+                let elementTypeLabel = '';
+                if (element.type === 'text') elementTypeLabel = 'Texto';
+                else if (element.type === 'registro') elementTypeLabel = 'Registro';
+                else if (element.type === 'imagen') elementTypeLabel = 'Imagen';
+                else if (element.type === 'fondo') elementTypeLabel = 'Fondo';
+                else if (element.type === 'fotografia') elementTypeLabel = 'Fotografía';
+
+                elementInfo.textContent = `${elementTypeLabel} (ID: ${element.id.substring(0, 4)}...)`;
+
+                const elementControls = document.createElement('span');
+                elementControls.classList.add('element-controls');
+
+                const visibilityButton = document.createElement('button');
+                visibilityButton.title = element.visible ? 'Ocultar' : 'Mostrar';
+                visibilityButton.innerHTML = `<i class="fas ${element.visible ? 'fa-eye' : 'fa-eye-slash'}"></i>`;
+                visibilityButton.onclick = (e) => {
+                     e.stopPropagation();
+                    toggleElementVisibility(element.id);
+                };
+                elementControls.appendChild(visibilityButton);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.title = 'Eliminar';
+                deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+                 deleteButton.onclick = (e) => {
+                     e.stopPropagation();
+                    deleteElement(element.id);
+                 };
+                elementControls.appendChild(deleteButton);
+
+                 const editButton = document.createElement('button');
+                 editButton.title = 'Editar';
+                 editButton.innerHTML = '<i class="fas fa-edit"></i>';
+                  editButton.onclick = (e) => {
+                     e.stopPropagation();
+                    editElement(element.id, element.type);
+                 };
+                 elementControls.appendChild(editButton);
+
+
+                 if (element.type !== 'fondo') {
+                     const moveUpButton = document.createElement('button');
+                     moveUpButton.title = 'Mover Arriba';
+                     moveUpButton.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                      moveUpButton.onclick = (e) => {
+                         e.stopPropagation();
+                        moveElementZIndex(element.id, 1);
+                     };
+                     elementControls.appendChild(moveUpButton);
+
+                     const moveDownButton = document.createElement('button');
+                     moveDownButton.title = 'Mover Abajo';
+                     moveDownButton.innerHTML = '<i class="fas fa-arrow-down"></i>';
+                      moveDownButton.onclick = (e) => {
+                         e.stopPropagation();
+                        moveElementZIndex(element.id, -1);
+                     };
+                     elementControls.appendChild(moveDownButton);
+                 }
+
+
+                listItem.appendChild(elementInfo);
+                listItem.appendChild(elementControls);
+
+                listItem.onclick = () => {
+                    selectElement(element.id);
+                };
+
+
+                elementsList.appendChild(listItem);
+            });
+             // Update the label in the list header
+            currentFaceLabel.textContent = appState.editingFace === 'front' ? 'Delantera' : 'Trasera';
+        }
+
+        function renderAll() {
+            // setupCanvasPreview(); // Esto ya se llama en changeDesignFaces y resize
+            renderCardElements(); // Renderiza los elementos dentro de los carnets existentes
+            renderElementList();
+        }
+
+        // --- Funciones de Manejo de Estado ---
+
+        function generateId() {
+            return '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function changeOrientation() {
+            appState.orientation = cardOrientationSelect.value;
+            setupCanvasPreview(); // Re-setup canvas preview layout
+            resetZoom();
+            // No need to call zoomOut here, resetZoom handles the initial fit
+        }
+
+        function changeDesignFaces() {
+             appState.designFaces = parseInt(designFacesSelect.value);
+             // If switching to 1 face, ensure we are editing the front face
+             if (appState.designFaces === 1 && appState.editingFace === 'back') {
+                  switchFace('front');
+             }
+             // Update tab visibility
+             updateTabVisibility();
+             setupCanvasPreview(); // Re-setup canvas preview layout
+             resetZoom(); // Re-adjust zoom for the new layout (1 or 2 cards)
+             // No need to call zoomOut here, resetZoom handles the initial fit
+        }
+
+        function switchFace(face) {
+             // Prevent switching to back face if designFaces is 1
+             if (appState.designFaces === 1 && face === 'back') {
+                 return;
+             }
+
+             if (appState.editingFace === face) return; // Already on this face
+
+             appState.editingFace = face;
+             appState.selectedElementId = null; // Deselect element when switching face
+
+             // Update active tab class
+             if (face === 'front') {
+                 tabFront.classList.add('active');
+                 tabBack.classList.remove('active');
+             } else {
+                 tabBack.classList.add('active');
+                 tabFront.classList.remove('active');
+             }
+
+             renderAll(); // Re-render to show elements of the new face
+        }
+
+        // Function to control tab visibility based on designFaces
+        function updateTabVisibility() {
+            if (appState.designFaces === 1) {
+                tabBack.style.display = 'none';
+            } else {
+                tabBack.style.display = 'inline-block'; // Or whatever the default display is
+            }
+        }
+
+
+        function addElement() {
+            const elementType = elementTypeSelect.value;
+            const currentFace = appState.editingFace;
+
+            const newElementId = generateId();
+            let newElement = {
+                id: newElementId,
+                type: elementType,
+                x: 50,
+                y: 50,
+                width: 100,
+                height: 100,
+                zIndex: appState.elements[currentFace].length + 1, // Z-index relative to elements on this face
+                visible: true,
+                selected: false,
+                content: '',
+                face: currentFace // Store which face this element belongs to
+            };
+
+            if (elementType === 'text') {
+                newElement.content = 'Nuevo Texto';
+                newElement.width = 150;
+                newElement.height = 30;
+                newElement.fontSize = 16;
+                newElement.color = '#000000';
+                newElement.textAlign = 'left';
+                newElement.fontFamily = 'sans-serif';
+                newElement.fontWeight = 'normal';
+                newElement.fontStyle = 'normal';
+                newElement.outlineThickness = 0;
+                newElement.outlineColor = '#000000';
+                newElement.shadowColor = '#000000';
+                newElement.shadowOffsetX = 0;
+                newElement.shadowOffsetY = 0;
+                newElement.shadowBlur = 0;
+
+            } else if (elementType === 'registro') {
+                 newElement.content = 'campo_ejemplo';
+                 newElement.width = 150;
+                 newElement.height = 30;
+            } else if (elementType === 'imagen') {
+                 newElement.content = '';
+                 newElement.width = 150;
+                 newElement.height = 150;
+                 newElement.maintainAspectRatio = true;
+                 newElement.initialWidth = newElement.width;
+                 newElement.initialHeight = newElement.height;
+                 newElement.scalePercentage = 100;
+
+            } else if (elementType === 'fondo') {
+                 // Remove any existing background on the current face
+                 appState.elements[currentFace] = appState.elements[currentFace].filter(el => el.type !== 'fondo');
+
+                 const { width: baseWidth, height: baseHeight } = appState.cardDimensions[appState.orientation];
+
+
+                 newElement.content = '';
+                 newElement.width = baseWidth; // Fondo toma las dimensiones base del carnet
+                 newElement.height = baseHeight; // Fondo toma las dimensiones base del carnet
+                 newElement.maintainAspectRatio = true;
+                 newElement.x = 0;
+                 newElement.y = 0;
+                 newElement.zIndex = 0; // Background is always zIndex 0
+                 newElement.visible = true;
+                 newElement.initialWidth = newElement.width;
+                 newElement.initialHeight = newElement.height;
+                 newElement.scalePercentage = 100;
+
+                 // Add the new background to the beginning of the array for this face
+                 appState.elements[currentFace].unshift(newElement);
+
+                 // Re-index zIndex for other elements on this face if necessary
+                 appState.elements[currentFace].forEach((el, index) => {
+                      if(el.type !== 'fondo' && el.zIndex === 0) {
+                           el.zIndex = index + 1;
+                      }
+                 });
+                 appState.elements[currentFace].sort((a, b) => a.zIndex - b.zIndex);
+
+
+                 selectElement(newElement.id);
+                 renderAll();
+                 editElement(newElement.id, newElement.type);
+                 return;
+
+            } else if (elementType === 'fotografia') {
+                 newElement.content = '';
+                 newElement.width = 307;
+                 newElement.height = 378;
+                 newElement.maintainAspectRatio = true;
+                 newElement.x = 100;
+                 newElement.y = 100;
+                 newElement.initialWidth = newElement.width;
+                 newElement.initialHeight = newElement.height;
+                 newElement.scalePercentage = 100;
+
+            } else {
+                 return;
+            }
+
+            // Add non-background element to the end of the current face's array
+            const maxZIndex = appState.elements[currentFace].reduce((max, el) => el.type !== 'fondo' ? Math.max(max, el.zIndex) : max, 0);
+            newElement.zIndex = maxZIndex + 1;
+            appState.elements[currentFace].push(newElement);
+            selectElement(newElement.id);
+            renderAll();
+
+            if (newElement.type === 'text' || newElement.type === 'imagen' || newElement.type === 'fotografia') {
+                editElement(newElement.id, newElement.type);
+            }
+        }
+
+        function selectElement(id) {
+            // Deselect the previously selected element in both faces' arrays
+            if (appState.selectedElementId) {
+                 const prevSelectedElementFront = appState.elements.front.find(el => el.id === appState.selectedElementId);
+                 if (prevSelectedElementFront) prevSelectedElementFront.selected = false;
+
+                 const prevSelectedElementBack = appState.elements.back.find(el => el.id === appState.selectedElementId);
+                 if (prevSelectedElementBack) prevSelectedElementBack.selected = false;
+            }
+
+            // Find and select the new element in either face's array
+            const elementToSelectFront = appState.elements.front.find(el => el.id === id);
+            const elementToSelectBack = appState.elements.back.find(el => el.id === id);
+
+            if (elementToSelectFront) {
+                 elementToSelectFront.selected = true;
+                 appState.selectedElementId = id;
+                 // If the selected element is on a different face than currently editing, switch face
+                 if (appState.editingFace !== 'front') {
+                      switchFace('front');
+                 }
+            } else if (elementToSelectBack) {
+                 elementToSelectBack.selected = true;
+                 appState.selectedElementId = id;
+                  // If the selected element is on a different face than currently editing, switch face
+                 if (appState.editingFace !== 'back') {
+                      switchFace('back');
+                 }
+            } else {
+                 appState.selectedElementId = null; // Deselect if ID not found
+            }
+
+            renderAll();
+        }
+
+
+        function toggleElementVisibility(id) {
+             // Find the element in either face's array
+            const elementFront = appState.elements.front.find(el => el.id === id);
+            const elementBack = appState.elements.back.find(el => el.id === id);
+
+            if (elementFront) {
+                elementFront.visible = !elementFront.visible;
+            } else if (elementBack) {
+                elementBack.visible = !elementBack.visible;
+            }
+            renderAll();
+        }
+
+        function deleteElement(id) {
+             if (appState.selectedElementId === id) {
+                 appState.selectedElementId = null;
+             }
+             // Filter elements from both faces
+            appState.elements.front = appState.elements.front.filter(el => el.id !== id);
+            appState.elements.back = appState.elements.back.filter(el => el.id !== id);
+
+            // Re-index elements on both faces
+             appState.elements.front.forEach((el, index) => {
+                 if (el.type !== 'fondo') el.zIndex = index + 1;
+             });
+             const backgroundFront = appState.elements.front.find(el => el.type === 'fondo');
+             if (backgroundFront) backgroundFront.zIndex = 0;
+             appState.elements.front.sort((a, b) => a.zIndex - b.zIndex);
+
+
+             appState.elements.back.forEach((el, index) => {
+                 if (el.type !== 'fondo') el.zIndex = index + 1;
+             });
+             const backgroundBack = appState.elements.back.find(el => el.type === 'fondo');
+             if (backgroundBack) backgroundBack.zIndex = 0;
+             appState.elements.back.sort((a, b) => a.zIndex - b.zIndex);
+
+
+            renderAll();
+        }
+
+        function moveElementZIndex(id, direction) {
+            // Find the element in the currently editing face
+             const currentFace = appState.editingFace;
+             const elementsOnFace = appState.elements[currentFace];
+
+             const elementIndex = elementsOnFace.findIndex(el => el.id === id);
+             if (elementIndex === -1 || elementsOnFace[elementIndex].type === 'fondo') return;
+
+             const currentZIndex = elementsOnFace[elementIndex].zIndex;
+             let targetZIndex = currentZIndex + direction;
+
+             targetZIndex = Math.max(1, targetZIndex); // Ensure not less than 1 (above background)
+
+             const targetElement = elementsOnFace.find(el => el.zIndex === targetZIndex && el.type !== 'fondo');
+
+             if (targetElement) {
+                 targetElement.zIndex = currentZIndex;
+                 elementsOnFace[elementIndex].zIndex = targetZIndex;
+             } else {
+                 elementsOnFace[elementIndex].zIndex = targetZIndex;
+             }
+
+             elementsOnFace.sort((a, b) => a.zIndex - b.zIndex);
+
+             renderAll();
+        }
+
+        // --- Funciones de Edición de Elementos ---
+
+        function editElement(id, type) {
+            selectElement(id); // Select the element in the list
+
+             // Find the element in either face
+            const element = appState.elements.front.find(el => el.id === id) || appState.elements.back.find(el => el.id === id);
+
+
+            if (!element) {
+                 console.error("Element not found for editing:", id);
+                 return;
+            }
+
+            // Ensure we are on the correct face tab when opening modal
+            if (element.face && element.face !== appState.editingFace) {
+                 switchFace(element.face); // Switch tab if element is on a different face
+            }
+
+
+            if (type === 'text') {
+                editingTextElementId = id;
+                editTextContentInput.value = element.content;
+                editFontSizeInput.value = element.fontSize;
+                editTextColorInput.value = element.color;
+                editTextAlignmentSelect.value = element.textAlign || 'left';
+                editFontFamilySelect.value = element.fontFamily || 'sans-serif';
+                editFontWeightBoldCheckbox.checked = element.fontWeight === 'bold';
+                editFontStyleItalicCheckbox.checked = element.fontStyle === 'italic';
+
+                editOutlineThicknessInput.value = parseFloat(element.outlineThickness) || 0;
+                editOutlineColorInput.value = element.outlineColor || '#000000';
+                editShadowColorInput.value = element.shadowColor || '#000000';
+                editShadowOffsetXInput.value = parseFloat(element.shadowOffsetX) || 0;
+                editShadowOffsetYInput.value = parseFloat(element.shadowOffsetY) || 0;
+                editShadowBlurInput.value = parseFloat(element.shadowBlur) || 0;
+
+
+                showEditTextModal();
+
+            } else if (type === 'imagen' || type === 'fondo' || type === 'fotografia') {
+                 editingImageElementId = id;
+                 uploadImageFileInput.value = '';
+                 if (element.content) {
+                     editImagePreview.src = element.content;
+                     editImagePreview.style.display = 'block';
+                 } else {
+                     if (type === 'fotografia') {
+                         editImagePreview.src = 'https://placehold.co/307x378/cccccc/000000?text=Foto+Usuario';
+                         editImagePreview.style.display = 'block';
+                     } else {
+                         editImagePreview.src = '';
+                         editImagePreview.style.display = 'none';
+                     }
+                 }
+
+                 if (element.type === 'fondo') {
+                      maintainAspectRatioCheckbox.checked = true;
+                      maintainAspectRatioCheckbox.disabled = true;
+                      document.querySelector('.modal-scale-controls').style.display = 'none';
+                 } else {
+                      maintainAspectRatioCheckbox.checked = element.maintainAspectRatio || false;
+                      maintainAspectRatioCheckbox.disabled = false;
+                      document.querySelector('.modal-scale-controls').style.display = 'block';
+                      editScalePercentageInput.value = element.scalePercentage || 100;
+                      editScalePercentageInput.disabled = !maintainAspectRatioCheckbox.checked;
+                 }
+                 showEditImageModal();
+            }
+            else {
+                alert(`Funcionalidad de edición para elementos de tipo "${type}" no implementada.`);
+            }
+        }
+
+        function showEditTextModal() {
+            editTextModalOverlay.classList.add('visible');
+        }
+
+        function hideEditTextModal() {
+            editTextModalOverlay.classList.remove('visible');
+            editingTextElementId = null;
+             editTextContentInput.value = '';
+             editFontSizeInput.value = '';
+             editTextColorInput.value = '#000000';
+             editTextAlignmentSelect.value = 'left';
+             editFontFamilySelect.value = 'sans-serif';
+             editFontWeightBoldCheckbox.checked = false;
+             editFontStyleItalicCheckbox.checked = false;
+             editOutlineThicknessInput.value = 0;
+             editOutlineColorInput.value = '#000000';
+             editShadowColorInput.value = '#000000';
+             editShadowOffsetXInput.value = 0;
+             editShadowOffsetYInput.value = 0;
+             editShadowBlurInput.value = 0;
+        }
+
+        function showEditImageModal() {
+            editImageModalOverlay.classList.add('visible');
+        }
+
+        function hideEditImageModal() {
+            editImageModalOverlay.classList.remove('visible');
+            editingImageElementId = null;
+             uploadImageFileInput.value = '';
+             editImagePreview.src = '';
+             editImagePreview.style.display = 'none';
+             maintainAspectRatioCheckbox.checked = false;
+             maintainAspectRatioCheckbox.disabled = false;
+             editScalePercentageInput.value = 100;
+             editScalePercentageInput.disabled = false;
+             document.querySelector('.modal-scale-controls').style.display = 'block';
+        }
+
+        function saveImageElement() {
+            // Find the element in either face
+            const element = appState.elements.front.find(el => el.id === editingImageElementId) || appState.elements.back.find(el => el.id === editingImageElementId);
+
+            if (!element) {
+                 console.error("Element to edit not found in saveImageElement.");
+                 hideEditImageModal();
+                 return;
+            }
+
+            try {
+                 if (element.type !== 'fondo') {
+                     element.maintainAspectRatio = maintainAspectRatioCheckbox.checked;
+
+                     if (element.maintainAspectRatio) {
+                         const percentage = parseFloat(editScalePercentageInput.value) || 100;
+                         element.scalePercentage = percentage;
+                         const scaleFactor = percentage / 100;
+                         element.width = element.initialWidth * scaleFactor;
+                         element.height = element.initialHeight * scaleFactor;
+                     }
+
+                 } else {
+                      element.maintainAspectRatio = true;
+                       // For background, ensure it takes the current card dimensions
+                       // Use base dimensions from state, not scaled DOM element
+                      const { width: baseWidth, height: baseHeight } = appState.cardDimensions[appState.orientation];
+                      element.width = baseWidth;
+                      element.height = baseHeight;
+                      element.x = 0;
+                      element.y = 0;
+                      element.scalePercentage = 100;
+                      element.initialWidth = baseWidth; // Update initial for background too
+                      element.initialHeight = baseHeight;
+                 }
+
+
+                if (uploadImageFileInput.files.length > 0) {
+                     const file = uploadImageFileInput.files[0];
+                     const reader = new FileReader();
+
+                     reader.onload = function(e) {
+                         const img = new Image();
+                         img.onload = function() {
+                              element.content = e.target.result;
+
+                              // On new image load, update initial dimensions and reset scale
+                              element.initialWidth = img.naturalWidth;
+                              element.initialHeight = img.naturalHeight;
+                              element.scalePercentage = 100;
+                              editScalePercentageInput.value = 100;
+
+                              // Apply the initial 100% scale
+                              element.width = element.initialWidth;
+                              element.height = element.initialHeight;
+
+
+                              if (element.type === 'fondo') {
+                                   const { width: baseWidth, height: baseHeight } = appState.cardDimensions[appState.orientation];
+                                   element.width = baseWidth;
+                                   element.height = baseHeight;
+                                   element.x = 0;
+                                   element.y = 0;
+                                   element.initialWidth = baseWidth;
+                                   element.initialHeight = baseHeight;
+                                   element.scalePercentage = 100;
+                              }
+
+
+                              renderAll();
+                              hideEditImageModal();
+                         }
+                         img.onerror = function() {
+                              console.error("Error loading new image during edit.");
+                              if (element.type === 'fotografia') {
+                                  element.content = 'https://placehold.co/307x378/ff0000/ffffff?text=Error+Foto';
+                              } else {
+                                  element.content = 'https://placehold.co/100x100/ff0000/ffffff?text=Error';
+                              }
+                               if (element.type === 'fondo') {
+                                   const { width: baseWidth, height: baseHeight } = appState.cardDimensions[appState.orientation];
+                                   element.width = baseWidth;
+                                   element.height = baseHeight;
+                                   element.x = 0;
+                                   element.y = 0;
+                               }
+                               element.initialWidth = element.width;
+                               element.initialHeight = element.height;
+                               element.scalePercentage = 100;
+                               editScalePercentageInput.value = 100;
+
+                              renderAll();
+                              hideEditImageModal();
+                         }
+                         img.src = e.target.result;
+                     }
+                     reader.readAsDataURL(file);
+                } else {
+                     console.log("No new file selected during edit. Updating aspect ratio and scale.");
+                      if (element.type === 'fondo') {
+                           const { width: baseWidth, height: baseHeight } = appState.cardDimensions[appState.orientation];
+                           element.width = baseWidth;
+                           element.height = baseHeight;
+                           element.x = 0;
+                           element.y = 0;
+                           element.scalePercentage = 100;
+                      } else {
+                           const percentage = parseFloat(editScalePercentageInput.value) || 100;
+                           element.scalePercentage = percentage;
+                           const scaleFactor = percentage / 100;
+                           element.width = element.initialWidth * scaleFactor;
+                           element.height = element.initialHeight * scaleFactor;
+                      }
+
+                     renderAll();
+                     hideEditImageModal();
+                }
+
+            } catch (error) {
+                console.error("saveImageElement: An error occurred:", error);
+                hideEditImageModal();
+            }
+        }
+
+
+        // --- Funcionalidad de Arrastre y Escalado ---
+
+        function getMinTextHeight(elementState, currentWidth) {
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.visibility = 'hidden';
+            tempDiv.style.left = '-9999px';
+            tempDiv.style.top = '-9999px';
+            tempDiv.style.width = `${parseFloat(currentWidth)}px`;
+            tempDiv.style.padding = '0';
+            tempDiv.style.boxSizing = 'content-box';
+            tempDiv.style.fontSize = elementState.fontSize ? `${elementState.fontSize}px` : '1em';
+            tempDiv.style.fontFamily = elementState.fontFamily || 'sans-serif';
+            tempDiv.style.fontWeight = elementState.fontWeight || 'normal';
+            tempDiv.style.fontStyle = elementState.fontStyle || 'normal';
+            tempDiv.style.whiteSpace = 'pre-wrap';
+            tempDiv.style.wordBreak = 'break-word';
+            tempDiv.textContent = elementState.content;
+
+            document.body.appendChild(tempDiv);
+            const minHeight = tempDiv.offsetHeight;
+            document.body.removeChild(tempDiv);
+
+            return minHeight;
+        }
+
+
+        function dragStart(e) {
+             if (e.button !== 0) return;
+             if (isSplitterDragging) return;
+
+             const clickedElement = e.target.closest('.card-element');
+
+             // Only allow dragging/resizing if the clicked element is on the currently editing face
+             if (clickedElement && clickedElement.dataset.elementId && clickedElement.dataset.face === appState.editingFace) {
+                  currentElement = clickedElement;
+                  currentElementState = appState.elements[appState.editingFace].find(el => el.id === currentElement.dataset.elementId);
+
+                  if (!currentElementState || currentElementState.type === 'fondo') {
+                       currentElement = null;
+                       currentElementState = null;
+                       return; // Don't drag/resize background or if element state not found
+                  }
+
+
+                 // Determine if resizing or dragging
+                 if (e.target.classList.contains('resize-handle')) {
+                     isResizing = true;
+                     resizeHandle = e.target;
+
+                     initialWidth = currentElementState.width;
+                     initialHeight = currentElementState.height;
+                     initialMouseX = e.clientX;
+                     initialMouseY = e.clientY;
+
+                     originalBorderStyle = currentElement.style.border;
+
+                     if ((currentElementState.type === 'imagen' || currentElementState.type === 'fotografia') && currentElementState.maintainAspectRatio && initialHeight !== 0) {
+                         initialAspectRatio = initialWidth / initialHeight;
+                     } else {
+                         initialAspectRatio = 0;
+                     }
+
+                     e.preventDefault();
+                     document.addEventListener('mousemove', drag);
+                     document.addEventListener('mouseup', dragEnd);
+
+                 } else {
+                     // If not resizing, it's a drag
+                      // Select the element if not already selected
+                     if (currentElement.dataset.elementId !== appState.selectedElementId) {
+                         selectElement(currentElement.dataset.elementId);
+                         // Don't start drag immediately after selection change, let the user click again
+                         return;
+                     }
+
+
+                    isDragging = true;
+
+                     const rect = currentElement.getBoundingClientRect();
+                     const cardRect = currentElement.parentElement.getBoundingClientRect(); // Get rect of the parent card container
+                     const scale = appState.zoomLevel;
+
+                     // Calculate offset relative to the scaled card container
+                     xOffset = (e.clientX - rect.left) / scale;
+                     yOffset = (e.clientY - rect.top) / scale;
+
+                     e.preventDefault();
+                     document.addEventListener('mousemove', drag);
+                     document.addEventListener('mouseup', dragEnd);
+                 }
+             } else {
+                  // If click was not on an element on the current face, deselect
+                 selectElement(null);
+             }
+        }
+
+        function dragEnd(e) {
+            if (isSplitterDragging) return;
+
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', dragEnd);
+
+             if (currentElement) {
+                 if (appState.selectedElementId !== currentElement.dataset.elementId) {
+                     currentElement.style.border = originalBorderStyle;
+                 }
+                 originalBorderStyle = '';
+             }
+
+
+            if (isDragging || isResizing) {
+                 // Find the element state again in case the array was modified during drag (unlikely but safe)
+                const elementState = appState.elements[appState.editingFace].find(el => el.id === currentElement.dataset.elementId);
+
+                if (!elementState) { // Should not happen if currentElement is set, but safety check
+                     isDragging = false;
+                     isResizing = false;
+                     currentElement = null;
+                     currentElementState = null;
+                     resizeHandle = null;
+                     initialAspectRatio = 0;
+                     return;
+                }
+
+
+                if (isResizing) {
+                     const finalWidth = parseFloat(currentElement.style.width).toFixed(2);
+                     let finalHeight = parseFloat(currentElement.style.height).toFixed(2);
+
+                     if (elementState.type === 'text') {
+                         const minHeight = getMinTextHeight(elementState, parseFloat(finalWidth));
+                         finalHeight = Math.max(parseFloat(finalHeight), minHeight).toFixed(2);
+                         currentElement.style.height = `${finalHeight}px`;
+                     }
+
+                     elementState.width = parseFloat(finalWidth);
+                     elementState.height = parseFloat(finalHeight);
+
+                     if ((elementState.type === 'imagen' || elementState.type === 'fotografia') && !elementState.maintainAspectRatio) {
+                         elementState.initialWidth = elementState.width;
+                         elementState.initialHeight = elementState.height;
+                         elementState.scalePercentage = 100;
+                     }
+
+                } else if (isDragging) {
+                     // Get the final position relative to the parent card container
+                     const finalX = parseFloat(currentElement.style.left).toFixed(2);
+                     const finalY = parseFloat(currentElement.style.top).toFixed(2);
+
+                    elementState.x = parseFloat(finalX);
+                    elementState.y = parseFloat(finalY);
+                }
+
+                renderAll();
+
+                isDragging = false;
+                isResizing = false;
+                currentElement = null;
+                currentElementState = null;
+                resizeHandle = null;
+                initialAspectRatio = 0;
+            }
+        }
+
+        function drag(e) {
+            if (isSplitterDragging) return;
+             if (!currentElement || !currentElementState) return; // Ensure we have an element and its state
+
+
+            if (isDragging) {
+                e.preventDefault();
+
+                // Get the bounding rect of the *scaled* card container
+                const cardRect = currentElement.parentElement.getBoundingClientRect();
+                const scale = appState.zoomLevel;
+
+                // Calculate the new position relative to the card container's top-left corner (in *unscaled* card coordinates)
+                // We need to account for the scale when converting mouse position to card position
+                const newX = (e.clientX - cardRect.left) / scale - xOffset;
+                const newY = (e.clientY - cardRect.top) / scale - yOffset;
+
+
+                currentElement.style.left = `${newX}px`;
+                currentElement.style.top = `${newY}px`;
+
+            } else if (isResizing && resizeHandle) {
+                 e.preventDefault();
+
+                 const scale = appState.zoomLevel;
+
+                 const mouseMovementX = (e.clientX - initialMouseX) / scale;
+                 const mouseMovementY = (e.clientY - initialMouseY) / scale;
+
+                 let newWidth = initialWidth + mouseMovementX;
+                 let newHeight = initialHeight + mouseMovementY;
+
+                 newWidth = Math.max(10, newWidth);
+                 newHeight = Math.max(10, newHeight);
+
+
+                 if ((currentElementState.type === 'imagen' || currentElementState.type === 'fotografia') && currentElementState.maintainAspectRatio && initialAspectRatio > 0) {
+                     if (Math.abs(mouseMovementX) > Math.abs(mouseMovementY)) {
+                         newHeight = newWidth / initialAspectRatio;
+                     } else {
+                         newWidth = newHeight * initialAspectRatio;
+                     }
+                     newWidth = Math.max(10, newWidth);
+                     newHeight = Math.max(10, newHeight);
+                 }
+                 else if (currentElementState.type === 'text') {
+                     const minHeight = getMinTextHeight(currentElementState, newWidth);
+                     newHeight = Math.max(newHeight, minHeight);
+                 }
+
+
+                 newWidth = newWidth.toFixed(2);
+                 newHeight = newHeight.toFixed(2);
+
+
+                 currentElement.style.width = `${newWidth}px`;
+                 currentElement.style.height = `${newHeight}px`;
+            }
+        }
+
+        // Modify listeners to attach to the card containers for element drag/resize
+        function addCanvasElementListeners() {
+             // Remove listeners from previous render
+             if(cardFront) {
+                 cardFront.removeEventListener('mousedown', dragStart);
+                 // No need to remove global listeners here, they are managed once
+             }
+             if(cardBack) {
+                 cardBack.removeEventListener('mousedown', dragStart);
+                 // No need to remove global listeners here
+             }
+
+             // Add mousedown listeners to the current card containers
+             if(cardFront) cardFront.addEventListener('mousedown', dragStart);
+             if(cardBack) cardBack.addEventListener('mousedown', dragStart);
+
+             // Global listeners for drag and dragEnd are added/removed once on initial load/cleanup
+        }
+
+
+        // --- Funciones de Zoom ---
+
+        function zoomIn() {
+            appState.zoomLevel += 0.1;
+            appState.zoomLevel = parseFloat(appState.zoomLevel.toFixed(2));
+            // Apply the new zoom level directly
+            applyZoom();
+        }
+
+        function zoomOut() {
+            appState.zoomLevel -= 0.1;
+            appState.zoomLevel = parseFloat(appState.zoomLevel.toFixed(2));
+            appState.zoomLevel = Math.max(appState.zoomLevel, 0.1);
+             // Apply the new zoom level directly
+            applyZoom();
+        }
+
+        function applyZoom() {
+             // Apply the current zoom level (scale) to the individual card containers
+            if (cardFront) cardFront.style.transform = `scale(${appState.zoomLevel})`;
+            if (cardBack) cardBack.style.transform = `scale(${appState.zoomLevel})`;
+
+            // Re-render elements to ensure correct positioning/sizing if needed (though transform handles scaling)
+            // renderAll(); // Removed as transform handles visual scaling
+        }
+
+
+        function resetZoom() {
+            const { orientation, cardDimensions, designFaces } = appState;
+            const { width: baseWidth, height: baseHeight } = cardDimensions[orientation];
+
+            // Use the wrapper dimensions to calculate available space
+            const containerWidth = canvasPreviewContainerWrapper.offsetWidth;
+            const containerHeight = canvasPreviewContainerWrapper.offsetHeight;
+
+            const wrapperPadding = 20 * 2; // 20px padding on each side of canvasPreviewWrapper
+            const areaPadding = 10 * 2; // 10px padding inside each canvas-preview area
+            const gapSpace = (designFaces - 1) * 20; // 20px gap between card preview areas
+
+            let availableWidth = containerWidth - wrapperPadding;
+            let availableHeight = containerHeight - wrapperPadding;
+
+            let scaleBasedOnWidth, scaleBasedOnHeight;
+
+            if (designFaces === 2) {
+                 if (orientation === 'horizontal') {
+                     // Two horizontal cards stacked vertically
+                     // Available height is split between two areas and the gap, minus area padding for each area
+                     availableHeight = (containerHeight - wrapperPadding - gapSpace) / 2 - areaPadding;
+                     availableWidth = containerWidth - wrapperPadding - areaPadding; // Available width is for one area minus area padding
+                     scaleBasedOnWidth = availableWidth / baseWidth;
+                     scaleBasedOnHeight = availableHeight / baseHeight;
+                 } else { // vertical orientation
+                     // Two vertical cards side-by-side horizontally
+                     // Available width is split between two areas and the gap, minus area padding for each area
+                     availableWidth = (containerWidth - wrapperPadding - gapSpace) / 2 - areaPadding;
+                     availableHeight = containerHeight - wrapperPadding - areaPadding; // Available height is for one area minus area padding
+                     scaleBasedOnWidth = availableWidth / baseWidth;
+                     scaleBasedOnHeight = availableHeight / baseHeight;
+                 }
+            } else { // 1 face
+                 // Available space is the whole wrapper area minus area padding
+                 availableWidth = containerWidth - wrapperPadding - areaPadding;
+                 availableHeight = containerHeight - wrapperPadding - areaPadding;
+                 scaleBasedOnWidth = availableWidth / baseWidth;
+                 scaleBasedOnHeight = availableHeight / baseHeight;
+            }
+
+
+            // Use the smaller scale factor to fit within the available space for *one* card
+            let newZoomLevel = Math.min(scaleBasedOnWidth, scaleBasedOnHeight);
+
+            // Ensure minimum zoom level
+            newZoomLevel = Math.max(newZoomLevel, 0.1);
+
+
+            appState.zoomLevel = newZoomLevel;
+
+            // Apply the calculated zoom level
+            applyZoom();
+            renderAll(); // Re-render elements after zoom reset
+        }
+
+
+        // --- Funciones del Separador Arrastrable ---
+
+        function startDrag(e) {
+            if (e.target === splitter && e.button === 0) {
+                isSplitterDragging = true;
+                initialSplitterMouseX = e.clientX;
+                initialCanvasWrapperWidth = canvasPreviewContainerWrapper.offsetWidth; // Usar el wrapper ahora
+
+                document.addEventListener('mousemove', dragSplitter);
+                document.addEventListener('mouseup', stopDrag);
+
+                e.preventDefault();
+            }
+        }
+
+        function dragSplitter(e) {
+            if (isSplitterDragging) {
+                const mouseMovementX = e.clientX - initialSplitterMouseX;
+                let newCanvasWrapperWidth = initialCanvasWrapperWidth + mouseMovementX; // Ajustar el wrapper ahora
+
+                const containerWidth = container.offsetWidth;
+                const splitterWidth = splitter.offsetWidth;
+
+                const maxCanvasWrapperWidth = containerWidth - splitterWidth - minPanelWidth;
+
+                newCanvasWrapperWidth = Math.max(minPanelWidth, Math.min(newCanvasWrapperWidth, maxCanvasWrapperWidth));
+
+                const newControlsWidth = containerWidth - newCanvasWrapperWidth - splitterWidth;
+
+                canvasPreviewContainerWrapper.style.width = `${newCanvasWrapperWidth}px`; // Ajustar el wrapper ahora
+                controlsPanel.style.width = `${newControlsWidth}px`;
+
+                resetZoom(); // Reset zoom to fit the new container size
+            }
+        }
+
+        function stopDrag(e) {
+            if (isSplitterDragging) {
+                isSplitterDragging = false;
+
+                document.removeEventListener('mousemove', dragSplitter);
+                document.removeEventListener('mouseup', stopDrag);
+            }
+        }
+
+
+        // --- Inicialización ---
+
+        cardOrientationSelect.addEventListener('change', changeOrientation);
+        designFacesSelect.addEventListener('change', changeDesignFaces); // Add listener for designFaces change
+
+        tabFront.addEventListener('click', () => switchFace('front'));
+        tabBack.addEventListener('click', () => switchFace('back'));
+
+        editTextModalOverlay.addEventListener('click', function(e) {
+            if (e.target === editTextModalOverlay) {
+                hideEditTextModal();
+            }
+        });
+
+        editImageModalOverlay.addEventListener('click', function(e) {
+            if (e.target === editImageModalOverlay) {
+                hideEditImageModal();
+            }
+        });
+
+        uploadImageFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    editImagePreview.src = e.target.result;
+                    editImagePreview.style.display = 'block';
+                     editScalePercentageInput.value = 100;
+                     editScalePercentageInput.disabled = false;
+                     maintainAspectRatioCheckbox.checked = true;
+                     maintainAspectRatioCheckbox.disabled = false;
+                }
+                reader.readAsDataURL(file);
+            } else {
+                editImagePreview.src = '';
+                editImagePreview.style.display = 'none';
+                 editScalePercentageInput.value = 100;
+                 editScalePercentageInput.disabled = true;
+                 maintainAspectRatioCheckbox.checked = false;
+                 maintainAspectRatioCheckbox.disabled = true;
+            }
+        });
+
+        maintainAspectRatioCheckbox.addEventListener('change', function() {
+            editScalePercentageInput.disabled = !this.checked;
+        });
+
+
+        splitter.addEventListener('mousedown', startDrag);
+
+        // Global listeners for drag and dragEnd (added once)
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+
+        // Initial setup
+        canvasPreviewContainerWrapper.style.width = '80%'; // <-- Ancho inicial aumentado en JS
+        controlsPanel.style.width = '20%'; // <-- Ancho inicial reducido en JS
+        setupCanvasPreview(); // Configurar las áreas de previsualización inicialmente
+        resetZoom(); // Ajustar el zoom inicial
+        updateTabVisibility(); // Set initial tab visibility
+
+
+        window.addEventListener('resize', () => {
+             setupCanvasPreview(); // Re-setup canvas preview layout on resize
+             resetZoom(); // Reset zoom to fit the new window size
+        });
+
+
+        function saveTextElement() {
+            try {
+                // Find the element in the correct face's array
+                const element = appState.elements[appState.editingFace].find(el => el.id === editingTextElementId);
+
+                if (element && element.type === 'text') {
+                    element.content = editTextContentInput.value;
+                    element.fontSize = parseFloat(editFontSizeInput.value) || 16;
+                    element.color = editTextColorInput.value;
+                    element.textAlign = editTextAlignmentSelect.value;
+                    element.fontFamily = editFontFamilySelect.value;
+                    element.fontWeight = editFontWeightBoldCheckbox.checked ? 'bold' : 'normal';
+                    element.fontStyle = editFontStyleItalicCheckbox.checked ? 'italic' : 'normal';
+
+                    element.outlineThickness = parseFloat(editOutlineThicknessInput.value) || 0;
+                    element.outlineColor = editOutlineColorInput.value;
+                    element.shadowColor = editShadowColorInput.value;
+                    element.shadowOffsetX = parseFloat(editShadowOffsetXInput.value) || 0;
+                    element.shadowOffsetY = parseFloat(editShadowOffsetYInput.value) || 0;
+                    element.shadowBlur = parseFloat(editShadowBlurInput.value) || 0;
+
+                    renderAll();
+
+                } else {
+                    console.error("saveTextElement: Text element not found or is not text type for saving on current face.");
+                }
+
+                hideEditTextModal();
+
+            } catch (error) {
+                console.error("saveTextElement: An error occurred:", error);
+            }
+        }
+
+
+    </script>
+
+</body>
+</html>
